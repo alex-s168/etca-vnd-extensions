@@ -51,7 +51,6 @@ float dot(float* a, float* b, size_t len) {
     o += a[i] * b[i];
   return o;
 }
-
 // example compiler output:
 float dot(float* a, float* b, size_t len) {
   // would insert a check for vec ext & fp32 vecs here
@@ -82,5 +81,46 @@ float dot(float* a, float* b, size_t len) {
   }
 
   return sum;
+}
+
+
+// example compiler input:
+void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
+  for (size_t i = 0; i < len; i ++) {
+    float prev = i == 0 ? 0 : arr[i - 1];
+    float this = arr[i];
+    float next = i + 1 == len ? 0 : arr[i + 1];
+    out[i] = kernel[0] * prev + kernel[1] * this + kernel[2] * next;
+  }
+}
+// example compiler output:
+void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
+  if (len == 0) return;
+
+  /* first iter */ {
+    float this = arr[i];
+    float next = i + 1 == len ? 0 : arr[i + 1];
+    out[i] = kernel[1] * this + kernel[2] * next;
+  }
+
+  size:t i = 1;
+  while (true) {
+    size_t num = __setvl (__VEC_F32, len, 1);
+    if (num == 0) break;
+    vector prev = __v_ld(arr + i - 1);
+    vector this = __v_ld(arr + i);
+    vector next = __v_ld(arr + i + 1);
+    vector res = __v_mul(prev, __v_brdcst(kernel[0]));
+    __v_fma(&res, this, __v_brdcst(kernel[1]));
+    __v_fma(&res, next, __v_brdcst(kernel[2]));
+    __v_st(out + i, res);
+    i += num;
+  }
+
+  /* last iter */ {
+    float prev = i == 0 ? 0 : arr[i - 1];
+    float this = arr[i];
+    out[i] = kernel[0] * prev + kernel[1] * this;
+  }
 }
 ```
