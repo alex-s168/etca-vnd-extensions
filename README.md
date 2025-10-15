@@ -19,6 +19,9 @@
 - minimal overhead for scalar floating point code: only overhead is requiring a `setvl` instruction once
 - easy and cheap to implement for scalar floating point
 - vectororized code should be portable
+- vectorized integer loops, even on vlen=1, shouldn't have much overhead compared to scalar integer loops,
+  to hopefully increase vector extension adaption in the future (even if it's just vlen=1), so that programs
+  don't need unvectorized versions of code
 
 ## Operands
 ### vector register
@@ -243,29 +246,79 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
 }
 ```
 
-### pow approximation
+### musl libc's sqrtf, vectorized
 ```c
-float fastPow(float a, float b) {
-    union {
-        float d;
-        int x;
-    } u = { a };
-    u.x = (int)(b * (u.x - 1072632447) + 1072632447);
-    return u.d;
+static const float tiny = 1.0e-30;
+
+float sqrtf(float x)
+{
+	float z;
+	int32_t sign = (int)0x80000000;
+	int32_t s,q,m,t,i;
+	uint32_t r;
+
+	int32_t ix; GET_FLOAT_WORD(ix, x);
+
+	/* take care of Inf and NaN */
+	if ((ix&0x7f800000) == 0x7f800000)
+		return x*x + x;
+
+	/* take care of zero */
+	if (ix <= 0) {
+		if ((ix&~sign) == 0)
+			return x;
+		if (ix < 0)
+			return (x-x)/(x-x);
+	}
+	/* normalize x */
+	m = ix>>23;
+	if (m == 0) {  /* subnormal x */
+		for (i = 0; (ix&0x00800000) == 0; i++)
+			ix<<=1;
+		m -= i - 1;
+	}
+	m -= 127;  /* unbias exponent */
+	ix = (ix&0x007fffff)|0x00800000;
+	if (m&1)  /* odd m, double x to make it even */
+		ix += ix;
+	m >>= 1;  /* m = [m/2] */
+
+	/* generate sqrt(x) bit by bit */
+	ix += ix;
+	q = s = 0;       /* q = sqrt(x) */
+	r = 0x01000000;  /* r = moving bit from right to left */
+
+	while (r != 0) {
+		t = s + r;
+		if (t <= ix) {
+			s = t+r;
+			ix -= t;
+			q += r;
+		}
+		ix += ix;
+		r >>= 1;
+	}
+
+	/* use floating add to find out rounding direction */
+	if (ix != 0) {
+		z = 1.0f - tiny; /* raise inexact flag */
+		if (z >= 1.0f) {
+			z = 1.0f + tiny;
+			if (z > 1.0f)
+				q += 2;
+			else
+				q += q & 1;
+		}
+	}
+	ix = (q>>1) + 0x3f000000;
+	ix += m << 23;
+	SET_FLOAT_WORD(z, ix);
+	return z;
 }
 ```
 
-Any compiler would output:
-```c
-vector fastPow(vector a, vector b) {
-    union {
-        float d;
-        int x;
-    } u = { a };
-    u.x = (int)(b * (u.x - 1072632447) + 1072632447);
-    return u.d;
-  TODO
-}
-```
 
-There is an interesting thing we could do for functions like this: we could require the integer u32 extension, and then make it generic over vlen:
+
+
+TODO: 
+There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
