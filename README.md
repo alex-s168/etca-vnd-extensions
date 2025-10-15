@@ -55,7 +55,7 @@ these have one bit elements, and have the same number of elements as the current
 struct __v_ldmo {
   register void* base;
   u3 plus_this_times_vlen;
-  u3 minus_this_times_ss;
+  i3 minus_this_times_ss;
 };
 ```
 
@@ -130,7 +130,7 @@ size_t strlen(char const* s) {
 }
 ```
 
-Any automatically loop vectorizing compiler will output:
+Any automatically loop vectorizing compiler would output:
 ```c
 size_t strlen(char const* s) {
   if (*s == 0) return 0;
@@ -164,7 +164,7 @@ float dot(float* a, float* b, size_t len) {
 }
 ```
 
-Any automatically loop vectorizing compiler will output:
+A "smart" compiler would output:
 ```c
 float dot(float* a, float* b, size_t len) {
   // would insert a check for vec ext & fp32 vecs here
@@ -182,7 +182,7 @@ float dot(float* a, float* b, size_t len) {
     c = __v_ld(a + __vlen*1); d = __v_ld(b + __vlen*1);   __v_fma(&s1,c,d);
     c = __v_ld(a + __vlen*2); d = __v_ld(b + __vlen*2);   __v_fma(&s1,c,d);
     c = __v_ld(a + __vlen*3); d = __v_ld(b + __vlen*3);   __v_fma(&s1,c,d);
-    vector x = __v_fhsum(s1);
+    vector x = __v_fhsum(s1); // horizontal reduce: sum
     sum = __v_fadd(sum, x);
 
     a += num; b += num; len -= num;
