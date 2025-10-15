@@ -242,3 +242,30 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
   }
 }
 ```
+
+### pow approximation
+```c
+float fastPow(float a, float b) {
+    union {
+        float d;
+        int x;
+    } u = { a };
+    u.x = (int)(b * (u.x - 1072632447) + 1072632447);
+    return u.d;
+}
+```
+
+Any compiler would output:
+```c
+vector fastPow(vector a, vector b) {
+    union {
+        float d;
+        int x;
+    } u = { a };
+    u.x = (int)(b * (u.x - 1072632447) + 1072632447);
+    return u.d;
+  TODO
+}
+```
+
+There is an interesting thing we could do for functions like this: we could require the integer u32 extension, and then make it generic over vlen:
