@@ -224,7 +224,7 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
     out[i] = kernel[1] * this + kernel[2] * next;
   }
 
-  size:t i = 1;
+  size_t i = 1;
   while (true) {
     size_t num = __setvl (__VEC_F32, len, 1);
     if (num == 0) break;
@@ -322,3 +322,9 @@ float sqrtf(float x)
 
 TODO: 
 There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
+
+
+## Other Architectures
+RVV: https://riscv.org/wp-content/uploads/2024/12/15.20-15.55-18.05.06.VEXT-bcn-v1.pdf
+
+TODO
