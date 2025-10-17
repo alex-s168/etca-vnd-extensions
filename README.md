@@ -201,6 +201,7 @@ float dot(float* a, float* b, size_t len) {
 }
 ```
 
+
 ### 1-dimensional convolution
 ```c
 void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
@@ -219,14 +220,14 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
   if (len == 0) return;
 
   /* first iter */ {
-    float this = arr[i];
-    float next = i + 1 == len ? 0 : arr[i + 1];
-    out[i] = kernel[1] * this + kernel[2] * next;
+    float this = arr[0];
+    float next = len == 1 ? 0 : arr[1];
+    out[0] = kernel[1] * this + kernel[2] * next;
   }
 
   size_t i = 1;
   while (true) {
-    size_t num = __setvl (__VEC_F32, len, 1);
+    size_t num = __setvl (__VEC_F32, len - 1, 1);
     if (num == 0) break;
     vector prev = __v_ld(arr + i - 1);
     vector this = __v_ld(arr + i);
@@ -239,12 +240,19 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
   }
 
   /* last iter */ {
+    size_t i = len - 1;
     float prev = i == 0 ? 0 : arr[i - 1];
     float this = arr[i];
     out[i] = kernel[0] * prev + kernel[1] * this;
   }
 }
 ```
+
+Existing compilers supporting this:
+- [LLVM targetting RISC-V vector](https://godbolt.org/z/j6qEbns85)
+- [LLVM targetting ARM SVE](https://godbolt.org/z/eWsKP865T)
+- [GCC targetting RISC-V vector](https://godbolt.org/z/G7nvT6M4q) (requires manually peeling)
+
 
 ### musl libc's sqrtf, vectorized
 ```c
