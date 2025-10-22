@@ -231,9 +231,11 @@ A "smart" compiler would output something like this:
 void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
   if (len == 0) return;
 
+  __setvl (__VEC_F32, 1, 1);
+
   /* first iter */ {
-    float this = arr[0];
-    float next = len == 1 ? 0 : arr[1];
+    vector this = __v_ld(arr);
+    vector next = len == 1 ? 0 : arr[1];
     out[0] = kernel[1] * this + kernel[2] * next;
   }
 
@@ -244,18 +246,22 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
     vector prev = __v_ld(arr + i - 1);
     vector this = __v_ld(arr + i);
     vector next = __v_ld(arr + i + 1);
-    vector res = __v_mul(prev, __v_brdcst(kernel[0]));
-    __v_fma(&res, this, __v_brdcst(kernel[1]));
-    __v_fma(&res, next, __v_brdcst(kernel[2]));
+    vector res = __v_mul(prev, __v_ld_brdcst(kernel));
+    __v_fma(&res, this, __v_ld_brdcst(kernel + 1));
+    __v_fma(&res, next, __v_ld_brdcst(kernel + 2));
     __v_st(out + i, res);
     i += num;
   }
 
+  // don't need another setvl here, because dty doesn't change, and can simply mark ops as SCALAR
+
   /* last iter */ {
     size_t i = len - 1;
-    float prev = i == 0 ? 0 : arr[i - 1];
-    float this = arr[i];
-    out[i] = kernel[0] * prev + kernel[1] * this;
+    vector prev = 0;
+    if (i != 0) {
+      prev = __v_ld SCALAR(arr + i - 1);
+    }
+    // llast iter using vector, SCALAR
   }
 }
 ```
@@ -330,7 +336,7 @@ this might also have better performance on some implementations
 
 TODO: 
 - There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
-- encode that some ops are only scalar?
+- encode that some ops are only scalar
 - float immediates?
 - two ABIs: vector extension scalar float ABI, and vector extension auto-vector float ABI?
 
