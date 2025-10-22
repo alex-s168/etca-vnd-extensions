@@ -82,6 +82,11 @@ have to stay stored there, so that, when extending vlen again, they are still ac
 
 It is recommended for compilers to emit `v.drop_upper`, at the end of heavily vectorized code.
 
+When setting the dtype to for example `f32`, integer vector operations will operator on the vector elements as `i32`,
+IF the core supports `i32` elements in vectors (otherwise it will fault),
+and the other way arround.
+
+
 ### v.drop_upper
 ```c
 enum __v_drop_upper_m  {
@@ -122,6 +127,13 @@ vector __v_ld(__v_mo imm(mo), vector_mask m);
 // - strlen
 vector __v_ldnf(__v_mo mo);
 ```
+
+### v.ld_brdcst
+```c
+// load one element of eltw, and broadcast to all elements
+vector __v_ld_brdcst(__v_mo imm(mo));
+```
+
 
 ## Examples
 ### strlen
@@ -255,8 +267,72 @@ Existing compilers supporting this:
 
 
 
+### reciprocal square root approximation
+https://en.wikipedia.org/wiki/Fast_inverse_square_root
+```c
+float rsqrt( float number )
+{
+	const float threehalfs = 1.5F;
+
+	float x2 = number * 0.5F;
+	float y  = number;
+	long i  = * ( long * ) &y;
+	i  = 0x5f3759df - ( i >> 1 );
+	y  = * ( float * ) &i;
+	y  = y * ( threehalfs - ( x2 * y * y ) );
+	return y;
+}
+```
+
+compiled for scalar floating point (via vector float extension):
+```c
+vector rsqrt(vector number)
+{
+  __setvl (__VEC_F32, 1, 1);
+  uint32_t i = __v_extract(number, 0); // in this case: performs f32 bitcast into 32bit int reg
+  number = __v_fmul(number, __v_ld(0.5F, MASK_FIRST));
+  i >>= 1;
+  i = __rsub(i, load(0x5f3759df));
+  vector y;
+  __v_insert(&y, i, 0);
+
+  vector threehalfs = __v_ld(1.5F, MASK_FIRST);
+  number = __v_fmul(number, y);
+  number = __v_fmul(number, y);
+  number = __v_fsub(__v_ld(1.5F, MASK_FIRST), number);
+  number = __v_fmul(number, y);
+  return number;
+}
+```
+
+BUT if we know that the target CPU supports `i32` vector elements, we can instead compile the function like this:
+```c
+// require vec elt ty = F32 or I32
+vector rsqrt(vector number)
+{
+  vector y = number; // in this case: performs f32 bitcast into 32bit int reg
+  vector x2 = __v_fmul(number, __v_ld(0.5F, MASK_FIRST));
+  y = __v_shr(i, 1);
+  y = __v_sub(__v_ld_brdcst(0x5f3759df), i);
+
+  vector threehalfs = __v_ld(1.5F, MASK_FIRST);
+  number = __v_fmul(x2, y);
+  number = __v_fmul(number, y);
+  number = __v_fsub(__v_ld(1.5F, MASK_FIRST), number);
+  number = __v_fmul(number, y);
+  return number;
+}
+```
+and now, this function can be used in both vectorized loops that require rsqrt, and for scalar floats;
+this might also have better performance on some implementations
+
+
+
 TODO: 
-There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
+- There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
+- encode that some ops are only scalar?
+- float immediates?
+- two ABIs: vector extension scalar float ABI, and vector extension auto-vector float ABI?
 
 
 ## Other Architectures
