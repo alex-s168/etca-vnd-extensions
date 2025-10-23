@@ -26,10 +26,10 @@
 ## Operands
 ### vector register
 ```c
-typedef u5 vector;
+typedef u4 vector;
 ```
 
-there are 32 vector registers (TODO: can reduce, rvv has 32...),
+there are 16 vector registers (TODO: can reduce, rvv has 32...),
 to prevent spilling in code that makes heavy use of vectors or floats.
 
 these have to be able to store any vector configuation that is legal on that target.
@@ -56,9 +56,42 @@ these have one bit elements, and have the same number of elements as the current
 // 2. being able to subtract a constant amount
 //    makes it cheap to spill vectors to/from the stack
 struct __v_ldmo {
-  register void* base;
+  register void* base : 4;
   u3 plus_this_times_vlen;
   i3 minus_this_times_ss;
+};
+```
+
+## Instruction encoding
+### "VB"
+`out = a op b`
+
+if `only_scalar` is set, this op only operates on the first element, and the other elements in the destination register are zeroed.
+
+```c
+struct {
+  u?? opc;
+  u1 only_scalar;
+
+  u4 out;
+  u4 a;
+  u4 b;
+};
+```
+
+### "VM"
+for loads: `reg = {mask} [mo]`
+
+for stores: `{mask} [mo] = reg`
+
+```c
+struct {
+  u?? opc;
+
+  // 16 bits:
+  u4 reg;
+  __v_ldmo mo : 10;
+  u2 mask;
 };
 ```
 
