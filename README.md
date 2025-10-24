@@ -95,6 +95,10 @@ struct {
 };
 ```
 
+### Design Considerations
+- Implementing the vector extension for one element vlen should be really easy!
+
+
 ## Instructions
 ### setvl
 ```c
@@ -139,6 +143,7 @@ This should be emitted by compilers at the end of code that increased the vlen b
 so that specific advanced out-of-order cores can reuse the upper elements of those registers for other code.
 
 It is recommended for compilers to use `AFTER_FIRST`, if they know that vlen is 1, and the dtype is correct.
+
 
 ### v.ld
 ```c
@@ -368,10 +373,9 @@ this might also have better performance on some implementations
 
 
 TODO: 
-- There is an interesting thing we could do for some scalar float funcs: we could require the integer u32 extension, and then make it generic over vlen!!
-- encode that some ops are only scalar
-- float immediates?
-- two ABIs: vector extension scalar float ABI, and vector extension auto-vector float ABI?
+- document SCALAR bit
+- float immediates
+- standard vector & float ABIs
 
 
 ## Other Architectures
