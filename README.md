@@ -172,6 +172,35 @@ vector __v_ldnf(__v_mo mo);
 vector __v_ld_brdcst(__v_mo imm(mo));
 ```
 
+### vm.any
+```c
+void __vm_any(vector_mask m) {
+  if (any bit set in m) {
+    test(0, 0)
+  } else {
+    test(1, 1)
+  }
+}
+```
+
+### vm.all
+```c
+void __vm_all(vector_mask m) {
+  if (all bits set in m) {
+    test(0, 0)
+  } else {
+    test(1, 1)
+  }
+}
+```
+
+### vm.or
+### vm.xor
+### vm.and
+### vm.ctlz
+### vm.cttz?? TODO
+### vm.popcnt
+
 
 ## Examples
 ### strlen
@@ -299,7 +328,7 @@ void conv1d_3(float kernel[3], float* out, float* arr, size_t len) {
     if (i != 0) {
       prev = __v_ld SCALAR(arr + i - 1);
     }
-    // llast iter using vector, SCALAR
+    // last iter using vector, SCALAR
   }
 }
 ```
