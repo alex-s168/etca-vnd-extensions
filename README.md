@@ -103,7 +103,7 @@ struct {
 ### setvl
 ```c
 // pseudocoe
-size_t __setvl (__vector_dtype_t imm(dty), size_t imm(num), size_t imm(chunksize)) {
+size_t __setvl (__vector_dtype_t imm(dty), size_t regOrImm(num), size_t imm(chunksize)) {
   size_t supported = readcr(__VLEN_ + dty);
   if (num != 0) {
     if (supported < num) num = supported;
