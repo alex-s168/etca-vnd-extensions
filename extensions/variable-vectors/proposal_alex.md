@@ -113,35 +113,13 @@ size_t __setvl (__vector_dtype_t imm(dty), size_t regOrImm(num), size_t imm(chun
 }
 ```
 
-When reducing vlen, the elements stored in the vector that are not anymore accessible,
-have to stay stored there, so that, when extending vlen again, they are still accessible.
+When reducing vlen, all values above the vlen are implementation defined.
 
 It is recommended for compilers to emit `v.drop_upper`, at the end of heavily vectorized code.
 
 When setting the dtype to for example `f32`, integer vector operations will operator on the vector elements as `i32`,
 IF the core supports `i32` elements in vectors (otherwise it will fault),
 and the other way arround.
-
-
-### v.drop_upper
-```c
-enum __v_drop_upper_m  {
-  ALL = 0, // all elements in all vectors are affected
-  AFTER_VLEN = 1,  // all elements that are not in current vlen are affected
-  AFTER_FIRST = 2, // all elements, except for the first one, are affected
-};
-void __v_drop_upper (__v_drop_upper_m imm(mode));
-```
-
-When this instruction is used, an implementation can fill the affected
-vector elements with any value.
-
-An implementation may ignore this instruction.
-
-This should be emitted by compilers at the end of code that increased the vlen by a lot,
-so that specific advanced out-of-order cores can reuse the upper elements of those registers for other code.
-
-It is recommended for compilers to use `AFTER_FIRST`, if they know that vlen is 1, and the dtype is correct.
 
 
 ### v.ld
