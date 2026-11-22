@@ -104,15 +104,14 @@ struct {
 ```c
 // pseudocoe
 size_t __setvl (__vector_dtype_t imm(dty), size_t regOrImm(num), size_t imm(chunksize)) {
-  size_t supported = readcr(__VLEN_ + dty);
-  if (num != 0) {
-    if (supported < num) num = supported;
-  } 
-  return floordiv(num, chunksize);
+  size_t supported = readcr(__VLEN_<dty>);
+  if (supported < num) num = supported;
+  size_t n = floordiv(num, chunksize);
+  // set cpu internal state here
+  __test(n, n); // sets flag register
+  return n;
 }
 ```
-
-TODO
 
 When reducing vlen, the elements stored in the vector that are not anymore accessible,
 have to stay stored there, so that, when extending vlen again, they are still accessible.
@@ -407,7 +406,11 @@ TODO:
 - standard vector & float ABIs
 
 
-## Other Architectures
-RVV: https://riscv.org/wp-content/uploads/2024/12/15.20-15.55-18.05.06.VEXT-bcn-v1.pdf
+## Comparision to other achitectures
 
-TODO
+### RVV
+https://riscv.org/wp-content/uploads/2024/12/15.20-15.55-18.05.06.VEXT-bcn-v1.pdf
+
+RVV has a "batching number" (`LMUM`), which can be set to a literal in the `setvl` instruction. In this mode, it groups together N neighboring vector registers, and use those as "mega registers". Any following vector instruction will be expanded into N vector instructions (probably typically before reaching the backend). This gives you an almost N times code size reduction (freeing up frontend and icache resources, which improves performance).
+
+TODO consider adding something similar^^
