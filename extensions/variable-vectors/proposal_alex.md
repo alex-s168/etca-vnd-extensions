@@ -212,7 +212,7 @@ size_t strlen(char const* s) {
 }
 ```
 
-Any automatically loop vectorizing compiler would output:
+Any sufficiently advanced automatically loop vectorizing compiler would output:
 ```c
 size_t strlen(char const* s) {
   if (*s == 0) return 0;
@@ -221,7 +221,7 @@ size_t strlen(char const* s) {
   // we could easily (and should, if we know vlen is small), unroll this loop
   while (true) {
     vector x = __v_ldnf(s);
-    mask z = __v_cmp_eq(x, __broadcast_arg 0);
+    mask z = __v_cmp_eq(x, __v_ld_brdcst(0));
     if (__vm_any(z)) {
       return num + __vm_ctlz(z);
     }
