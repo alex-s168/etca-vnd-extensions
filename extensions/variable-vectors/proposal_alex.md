@@ -411,6 +411,6 @@ TODO:
 ### RVV
 https://riscv.org/wp-content/uploads/2024/12/15.20-15.55-18.05.06.VEXT-bcn-v1.pdf
 
-RVV has a "batching number" (`LMUM`), which can be set to a literal in the `setvl` instruction. In this mode, it groups together N neighboring vector registers, and use those as "mega registers". Any following vector instruction will be expanded into N vector instructions (probably typically before reaching the backend). This gives you an almost N times code size reduction (freeing up frontend and icache resources, which improves performance).
+RVV has a "batching number" (`LMUM`), which can be set to a literal in the `setvl` instruction. In this mode, it groups together N neighboring vector registers, and use those as "mega registers". Any following vector instruction will be expanded into N vector instructions (probably typically before reaching the backend). This gives you an almost N times code size reduction (freeing up frontend and icache resources, which improves performance), and the hardware may even have wider ALUs than registers, increasing speed aswell.
 
 TODO consider adding something similar^^
