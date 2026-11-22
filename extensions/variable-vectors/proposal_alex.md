@@ -355,6 +355,8 @@ vector rsqrt(vector number)
 }
 ```
 
+TODO: make cpu require all vector element types?
+
 BUT if we know that the target CPU supports `i32` vector elements, we can instead compile the function like this:
 ```c
 // require vec elt ty = F32 or I32
